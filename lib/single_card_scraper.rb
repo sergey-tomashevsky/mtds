@@ -13,6 +13,8 @@ class SingleCardScraper
 
   def run
     html_body = request_store_page
+    return unless html_body
+
     card_offers_params = HtmlDocumentParser.new(html_body).extract_card_offers_params
     @card.update_offers(card_offers_params)
   end

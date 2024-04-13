@@ -2,11 +2,11 @@
 
 require "addressable/uri"
 require "faraday"
-require "nokogiri"
 
 require_relative "../db/database"
 require_relative "models/card"
 require_relative "models/card_offer"
+require_relative "utils/html_document_parser"
 
 class Scraper
   SEARCH_URL = "https://mtgtrade.net/store/single/"
@@ -41,29 +41,15 @@ class Scraper
       return
     end
 
-    # TODO: do not delist previous offers that weren't changed/removed.
-    # Delist previous offers.
-    CardOffer.where(delisted: false, card:).update(delisted: true, delisted_at: Time.now)
+    card_offers_params = HtmlDocumentParser.new(response.body).extract_card_offers_params
 
-    # Import new offers.
-    html_doc = Nokogiri::HTML(response.body)
-    html_doc.css("div.single-card-sellers table").each do |seller_table|
-      seller_name = seller_table.at_css("div.js-crop-text a").content
-
-      seller_table.css("tbody tr").each do |selling_item|
-        # Only import offers for cards in Russian language.
-        is_russian = !selling_item.at_css(".lang-item-ru").nil?
-        next unless is_russian
-
-        # TODO: extract showcase, extended art, retro frame
-        set_name =
-          selling_item.at_css("img.choose-set").attributes.values.find { _1.name == "alt" }.value
-        price = selling_item.at_css("div.catalog-rate-price b").content.split.first.to_i
-        foil = !selling_item.at_css("img.foil").nil?
-
-        # TODO: extract params here and wrap new offers create and previous offers update
-        # in a single transcation.
-        CardOffer.create(card:, price:, foil:, seller_name:, set_name:)
+    DB.transaction do
+      # TODO: do not delist previous offers that weren't changed/removed.
+      # Delist previous offers.
+      card.offers_dataset.current.update(delisted: true, delisted_at: Time.now)
+      # Import new offers.
+      card_offers_params.each do |params|
+        card.add_offer(params)
       end
     end
   end

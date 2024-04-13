@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "addressable/uri"
+require "concurrent-ruby"
 require "faraday"
 
 require_relative "../db/database"
@@ -11,19 +12,33 @@ require_relative "utils/html_document_parser"
 class Scraper
   SEARCH_URL = "https://mtgtrade.net/store/single/"
   REQUEST_TIMEOUT = 5
+  THREAD_COUNT = 10
 
   def initialize
     @connection = Faraday.new { _1.options.timeout = REQUEST_TIMEOUT }
   end
 
   def run
-    query = Card.where(purchased: false)
+    query = Card.where(purchased: false).order(:name)
+    completed_cards = 0
     total_cards = query.count
-    # TODO: add multi-threading for quicker look-up.
-    query.each_with_index do |card, index|
-      puts "Looking up prices for #{card.name}... (#{index + 1}/#{total_cards})"
-      import_card_offers(card)
+
+    pool = Concurrent::ThreadPoolExecutor.new(
+      min_threads: THREAD_COUNT,
+      max_threads: THREAD_COUNT,
+      max_queue: 0
+    )
+    query.each do |card|
+      pool.post do
+        import_card_offers(card)
+        completed_cards += 1
+        puts "Done looking up prices for #{card.name}... (#{completed_cards}/#{total_cards})"
+      end
     end
+
+    pool.shutdown
+    pool.wait_for_termination
+    puts "Finished!"
   end
 
   private

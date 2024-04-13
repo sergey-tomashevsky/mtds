@@ -21,7 +21,7 @@ class Scraper
     query = Card.where(purchased: false).order(:name)
     @total_cards = query.count
 
-    thread_pool = Concurrent::Threadthread_poolExecutor.new(
+    thread_pool = Concurrent::ThreadPoolExecutor.new(
       min_threads: THREAD_COUNT,
       max_threads: THREAD_COUNT,
       max_queue: 0

@@ -33,7 +33,7 @@ task :show_offers do
   args = opts.order!(ARGV) { |_| } # Block content isn't important here.
   opts.parse!(args)
 
-  Analyzer.run(**options)
+  Analyzer.new(**options).run
   exit
 end
 

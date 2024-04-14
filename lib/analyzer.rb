@@ -8,7 +8,7 @@ require_relative "models/card_offer"
 
 class Analyzer
   class << self
-    def run(max_price: nil, include_foils: false)
+    def run(max_price: nil, include_foils: false, min_offers: 1)
       best_offers_by_seller = {}
 
       offers_query =
@@ -27,10 +27,13 @@ class Analyzer
         best_offers_by_seller[offer.seller_name] << offer
       end
 
-      sorted_best_offers_by_seller = best_offers_by_seller.sort_by { |_, offers| offers.size }
+      best_offers_by_seller.filter! { |_, offers| offers.length >= min_offers }
+
+      sorted_best_offers_by_seller = best_offers_by_seller.sort_by { |_, offers| offers.length }
       sorted_best_offers_by_seller.reverse.to_h.each do |seller_name, offers|
+
         puts "Seller: #{seller_name}"
-        puts "Total sum: #{offers.sum(&:price)} rub, amount of cards: #{offers.size}"
+        puts "Total sum: #{offers.sum(&:price)} rub, amount of cards: #{offers.length}"
 
         offers.sort_by(&:price).reverse.each do |offer|
           best_card_price = offer.values[:best_price]

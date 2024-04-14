@@ -24,6 +24,11 @@ task :show_offers do
   opts = OptionParser.new
   opts.banner = "Usage: rake show_offers [options]"
   opts.on("--maxprice VALUE", Integer, "Maximum price per card.") { |mp| options[:max_price] = mp }
+  opts.on(
+    "--minoffers VALUE",
+    Integer,
+    "Minimum size of offers per seller."
+  ) { |min_offers| options[:min_offers] = min_offers }
   opts.on("--foil", TrueClass, "Include foil cards.") { |f| options[:include_foils] = !f.nil? }
   args = opts.order!(ARGV) { |_| } # Block content isn't important here.
   opts.parse!(args)

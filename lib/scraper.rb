@@ -1,18 +1,17 @@
 # frozen_string_literal: true
 
 require "concurrent-ruby"
-require "faraday"
 
 require_relative "../db/database"
 require_relative "models/card"
 require_relative "single_card_scraper"
 
 class Scraper
-  REQUEST_TIMEOUT = 5
   THREAD_COUNT = 10
 
-  def initialize
-    @connection = Faraday.new { _1.options.timeout = REQUEST_TIMEOUT }
+  def initialize(connector:, parser:)
+    @connector = connector
+    @parser = parser
     @total_cards = 0
     @completed_cards = 0
   end
@@ -28,7 +27,7 @@ class Scraper
     )
     query.each do |card|
       thread_pool.post do
-        SingleCardScraper.new(card, @connection).run
+        SingleCardScraper.new(card:, connector: @connector, parser: @parser).run
         @completed_cards += 1
         puts "Done looking up prices for #{card.name} [#{progress}]"
       end

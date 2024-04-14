@@ -10,8 +10,10 @@ RuboCop::RakeTask.new(:lint) do |task|
 end
 
 task :scrape_offers do
+  require_relative "lib/utils/html_document_parser"
+  require_relative "lib/utils/http_connector"
   require_relative "lib/scraper"
-  Scraper.new.run
+  Scraper.new(connector: HttpConnector, parser: HtmlDocumentParser).run
 end
 
 task :show_offers do
